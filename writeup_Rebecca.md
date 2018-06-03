@@ -16,3 +16,34 @@ We are supposed to feed the simulator with a set of points per cycle (50 points 
 A highway map provides coordinates of the points at the double yellow line in middle of the highway. The total length is 6946 m. The car starts from the red point and runs anti clock wise.
 ![picture alt](report/overview1.png)
 ![picture alt](report/overview2.png)
+
+* Output
+A set of points coordinates in the next coming cycle (0.02 s) in xy coordinate system.
+
+## 1. The code compiles correctly.
+The code compiles successfully and generate the object file.
+
+## 2. Valid trajectories
+### The car is able to drive at least 4.32 miles without incident..
+
+The car runs for 6.71 miles without incident.
+![picture alt](report/run well for 6 miles.png)
+
+### The car drives according to the speed limit
+Please refer to the picture above. The car's speed averages at 46 mph.
+
+### Max Acceleration and Jerk are not Exceeded
+The acceleration is always below 10m/s2, and the jerk's always below 10m/s^3;
+
+### Car does not have collisions
+The car never collides with other cars.
+
+### The car stays in its lane, except for the time between changing lanes
+The car stays in its lane, 
+
+### The car is able to change lanes
+The car will turn to a nearby car when a car in front of it is too slow, or a car behind it is too fast. It only change lanes when it wants to maintein a higher yet below limit speed, and keeps safe.
+
+## 3. Model documentation
+
+
