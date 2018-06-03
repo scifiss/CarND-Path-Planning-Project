@@ -73,8 +73,11 @@ The car should only change lanes if such a change would be safe, and also if the
 Lane | Check car s | Check car v | cost                | Action
 -----|-------------|-------------|---------------------|-----------|
 Ego car's lane | s>s_ego+30 |    | 0                   |           |
-   | s_ego<s<s_ego+30 |      | Vcost(v_ego-dv,v_goal)+(1-(s-s_ego)/30)+(v_ego-v)/v_ego| v_ego-=dv |
-   | s_ego-30<s<s_ego | v>v_ego | Vcost(v_ego+dv,v_goal)+(1-(s_ego-s)/30)+(v-v_ego)/v_ego| v_ego+=dv |
-   | s< s_ego | v<v_ego | 0 |     |
+Ego car's lane   | s_ego<s<s_ego+30 |      | Vcost(v_ego-dv,v_goal)+(1-(s-s_ego)/30)+(v_ego-v)/v_ego| v_ego-=dv |
+Ego car's lane   | s_ego-30<s<s_ego | v>v_ego | Vcost(v_ego+dv,v_goal)+(1-(s_ego-s)/30)+(v-v_ego)/v_ego| v_ego+=dv |
+Ego car's lane   | s< s_ego | v<v_ego | 0 |     |
+Neighboring lane | s>s_ego+30 |    | 0                   |           |
+Neighboring lane | s_ego<s<= s_ego+30 |     | Vcost(v_ego-dv,v_goal)+(1-(s-s_ego)/30)+(v_ego-v)/v_ego | v_ego-= dv |
+Neighboring lane | s_ego-30<s<=s_ego  | v>v_ego | Vcost(v_ego+dv,v_goal)+(1-(s_ego-s)/30)+(v-v_ego)/v_ego | v_ego+=dv|
 
-   
+ 
