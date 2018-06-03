@@ -50,8 +50,7 @@ The car will turn to a nearby car when a car in front of it is too slow, or a ca
 
 ## 3. Model documentation
 ###  Move the car 
-To get a smooth control, use spline to generate a smooth trajectory with 5 points: previous two points as a start, and 3 points ahead with 30m in gap (line 445~492). 
-Then the code uses the points in history, and fill in 30m ahead with up to 50 points that fall in the spline curve (line 495~529). 
+To get a smooth control, use spline to generate a smooth trajectory with 5 points: previous two points as a start, and 3 points ahead with 30m in gap (line 445-492). Then the code uses the points in history, and fill in 30m ahead with up to 50 points that fall in the spline curve (line 495-529). 
 
 The coordinates are transformed into Frenet to generate spline (line 484-488,513-514, and transformed back to xy coords (line 516-524).
 
@@ -74,4 +73,8 @@ The car should only change lanes if such a change would be safe, and also if the
 Lane | Check car s | Check car v | cost                | Action
 -----|-------------|-------------|---------------------|-----------|
 Ego car's lane | s>s_ego+30 |    | 0                   |           |
+   | s_ego<s<s_ego+30 |      | Vcost(v_ego-dv,v_goal)+(1-(s-s_ego)/30)+(v_ego-v)/v_ego| v_ego-=dv |
+   | s_ego-30<s<s_ego | v>v_ego | Vcost(v_ego+dv,v_goal)+(1-(s_ego-s)/30)+(v-v_ego)/v_ego| v_ego+=dv |
+   | s< s_ego | v<v_ego | 0 |     |
 
+   
