@@ -27,6 +27,7 @@ The code compiles successfully and generate the object file.
 ### The car is able to drive at least 4.32 miles without incident..
 
 The car runs for 6.71 miles without incident.
+
 ![picture alt](report/runwellfor6miles.png)
 
 ### The car drives according to the speed limit
