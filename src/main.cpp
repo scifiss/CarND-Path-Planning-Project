@@ -180,6 +180,44 @@ vector<double> getXY(double s, double d, const vector<double> &maps_s, const vec
 
 }
 
+/*
+If the car is too slow, the cost approaches 1.
+  The lower the velocity, the faster the cost grows.
+  If the car is faster than speed limit, the cost reaches max 1.
+*/
+double CostVelocity( double goalSpeed, double egoSpeed)
+{
+    double cost= 1- exp((egoSpeed-goalSpeed)/goalSpeed*2.0);  // use power
+
+    cost = pow((egoSpeed - goalSpeed)/goalSpeed,2.0); // use quadratic
+    if (egoSpeed>goalSpeed)
+        cost=1.0;
+
+    return cost;
+}
+/*
+cost of adjacent car too close to the ego car (both in s and v)
+*/
+double CostCheckcar(double egocarS, double checkcarS, double egoSpeed, double checkSpeed, double safe_dist, double goalSpeed, double deltaSpeed)
+{
+    double cost=0.0;
+    if (fabs((egocarS-checkcarS)>= safe_dist))
+        cost=0.0;
+    else if (egocarS < checkcarS && checkcarS < egocarS+safe_dist)
+    {
+        cost = 1 - (checkcarS- egocarS )/safe_dist;
+        cost += (egoSpeed - checkSpeed)/egoSpeed;
+        cost += CostVelocity(goalSpeed, egoSpeed-deltaSpeed);
+    }
+    else if (checkcarS>egocarS-safe_dist && egocarS>checkcarS)
+    {
+        cost = 1 - (egocarS-checkcarS)/safe_dist;
+        cost += (checkSpeed-egoSpeed)/egoSpeed;
+        cost += CostVelocity(goalSpeed, egoSpeed+deltaSpeed);
+    }
+    return cost;
+}
+
 int main()
 {
     uWS::Hub h;
@@ -275,90 +313,71 @@ int main()
                     // TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
                     double VL = 49.5; // mph, speed limit
 
-////            double dist_inc = 0.5;  // meters
-//            for(int i = 0; i < 50; i++)
-//            {
-//
-//            // follow the track
-//              double next_s = car_s + dist_inc*(i+1);
-//              double next_d = 6;
-//              vector<double> next_xy = getXY(next_s, next_d, map_waypoints_s,map_waypoints_x, map_waypoints_y );
-//              next_x_vals.push_back(next_xy[0]);
-//              next_y_vals.push_back(next_xy[1]);
-//              // run in a straight line
-//              next_x_vals.push_back(car_x+(dist_inc*i)*cos(deg2rad(car_yaw)));
-//              next_y_vals.push_back(car_y+(dist_inc*i)*sin(deg2rad(car_yaw)));
-//            }
 
-                    // turn in a circle
-//                    double pos_x;
-//                    double pos_y;
-//                    double angle;
                     int prev_size = previous_path_x.size();
-//
-//                    for(int i = 0; i < prev_size; i++)
-//                    {
-//                        next_x_vals.push_back(previous_path_x[i]);
-//                        next_y_vals.push_back(previous_path_y[i]);
-//                    }
-//
-//                    if(prev_size == 0)
-//                    {
-//                        pos_x = car_x;
-//                        pos_y = car_y;
-//                        angle = deg2rad(car_yaw);
-//                    }
-//                    else
-//                    {
-//                        pos_x = previous_path_x[prev_size-1];
-//                        pos_y = previous_path_y[prev_size-1];
-//
-//                        double pos_x2 = previous_path_x[prev_size-2];
-//                        double pos_y2 = previous_path_y[prev_size-2];
-//                        angle = atan2(pos_y-pos_y2,pos_x-pos_x2);
-//                    }
-//
-//                    double dist_inc = 0.5;
-//                    for(int i = 0; i < 50-prev_size; i++)
-//                    {
-//                        next_x_vals.push_back(pos_x+(dist_inc)*cos(angle+(i+1)*(pi()/100)));
-//                        next_y_vals.push_back(pos_y+(dist_inc)*sin(angle+(i+1)*(pi()/100)));
-//                        pos_x += (dist_inc)*cos(angle+(i+1)*(pi()/100));
-//                        pos_y += (dist_inc)*sin(angle+(i+1)*(pi()/100));
-//                    }
 
 
                     if (prev_size>0)
                         car_s = end_path_s;
 
                     bool too_close = false;
+                    bool leftlane_tooclose = false;
+                    bool rightlane_tooclose = false;
 
+
+                    double safe_dist = 30;
+
+
+                    double cost_KL=0.0;
+                    double cost_LCL = 0.0;
+                    double cost_LCR = 0.0;
+
+                    double frontcar_cost = CostVelocity(VL, ref_vel-0.224);
+                    double backcar_cost = CostVelocity(VL, ref_vel+0.224);
                     //find ref_v to use
                     for (int i=0; i< sensor_fusion.size(); i++)
                     {
                         // car is in my lane
-                        float d = sensor_fusion[i][6];  //  [ id, x, y, vx, vy, s, d]
+                        double d = sensor_fusion[i][6];  //  [ id, x, y, vx, vy, s, d]
+                        double vx = sensor_fusion[i][3];
+                        double vy = sensor_fusion[i][4];
+                        double check_speed = distance(0,0,vx,vy);
+                        double check_car_s = sensor_fusion[i][5];
+                        // use previous # of points to project s beyond the  current location of [id] car
+                        check_car_s += (double) prev_size * 0.02 * check_speed;
+                        int check_lane = (int) (d/4);
+                        double changelane_cost = CostCheckcar(car_s, check_car_s, car_speed, check_speed, safe_dist, VL, 0.224);
                         // check if it's in the ego car's lane
-                        if (d < (lane*4 + 4) && d > (lane*4))
+                        if (check_lane == lane)
                         {
-                            double vx = sensor_fusion[i][3];
-                            double vy = sensor_fusion[i][4];
-                            double check_speed = distance(0,0,vx,vy);
-                            double check_car_s = sensor_fusion[i][5];
-                            // use previous # of points to project s beyond the  current location of [id] car
-                            check_car_s += (double) prev_size * 0.02 * check_speed;
-
-                            if ((check_car_s > car_s && (check_car_s - car_s)<30 ))
+                            if ((check_car_s > car_s && (check_car_s - car_s)<safe_dist ))
                             {
                                 //ref_vel = 29.5;  // mph
-
                                 too_close = true;
 
+                                if (cost_KL < frontcar_cost)
+                                {
+                                    cost_KL = frontcar_cost;
+                                }
 
                             }
+                        }
+                        else if (check_lane == lane-1)
+                        {
+                            if ((check_car_s > car_s && (check_car_s - car_s)<safe_dist ))
+                                leftlane_tooclose = true;
+                            if (cost_LCL < changelane_cost)
+                            {
+                                cost_LCL = changelane_cost;
+                            }
 
-
-
+                        }
+                        else if (check_lane == lane+1)
+                        {
+                            if ((check_car_s > car_s && (check_car_s - car_s)<safe_dist ))
+                                rightlane_tooclose = true;
+                            if (cost_LCR < changelane_cost)
+                                cost_LCR = changelane_cost;
                         }
 
 
@@ -366,19 +385,54 @@ int main()
 
                     if (too_close)
                     {
-                        ref_vel -= 0.224;
-//                      if (lane>0)
-//                          {
-//
-//                            lane = 0;
-//                          }
+                        //ref_vel -= 0.224;
+
+                        if (lane==0)
+                        {
+                            if (cost_LCR<cost_KL)
+                            {
+                                lane +=1;
+                                if (rightlane_tooclose)
+                                    ref_vel-= 0.224;
+                            }
+                            else
+                                ref_vel-= 0.224;
+                        }
+                        else if (lane==1)
+                        {
+                            if (cost_LCL<cost_KL)
+                            {
+                                lane -=1;
+                                if (leftlane_tooclose)
+                                    ref_vel-=0.224;
+                            }
+                            else if (cost_LCR<cost_KL)
+                            {
+                                lane +=1;
+                                if (rightlane_tooclose)
+                                    ref_vel-= 0.224;
+                            }
+                            else
+                                ref_vel -= 0.224;
+
+                        }
+                        else
+                        {
+                            if (cost_LCL<cost_KL)
+                            {
+                                lane -=1;
+                                if (leftlane_tooclose)
+                                    ref_vel-=0.224;
+                            }
+                            else
+                                ref_vel -= 0.224;
+                        }
+
                     }
                     else if (ref_vel<VL)
                     {
                         ref_vel += 0.224;   // 0.1 m/s
                     }
-
-
 
                     // create a list of widely spaced (x,y) waypoints, and interpolate them with a spline and fill it with more points to control speed.
                     vector<double> ptsx;
@@ -448,7 +502,7 @@ int main()
                     // calculate how to break up spline so as to travel at desired ref velocity (limit)
                     double target_x = 30.0;
                     double target_y = s(target_x);
-                    double target_distance = sqrt(target_x*target_x + target_y*target_y);
+                    double target_distance = distance(0,0, target_x, target_y);// sqrt(target_x*target_x + target_y*target_y);
 
                     double x_add_on = 0.0;
                     double N = target_distance/(0.02 * ref_vel/2.24);   // 0.02s * ref_vel/2.24 m/s
@@ -473,10 +527,6 @@ int main()
                         next_y_vals.push_back(y_point);
 
                     }
-
-
-
-
 
                     // END
 
